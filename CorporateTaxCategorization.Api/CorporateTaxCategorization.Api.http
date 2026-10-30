@@ -1,0 +1,46 @@
+@baseUrl = http://localhost:5075
+@clientId = SYNTH-001
+@importId = {{importedWorkbooks.response.body.$[0].id}}
+
+### Angular workflow: open http://localhost:4200/
+### Upload only queues raw SQL import. It does not request prediction.
+POST {{baseUrl}}/api/clients/{{clientId}}/workbooks
+Content-Type: multipart/form-data; boundary=WorkbookBoundary
+
+--WorkbookBoundary
+Content-Disposition: form-data; name="file"; filename="SYNTH-001-FY2026.xlsx"
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+< ../outputs/synthetic-workbooks/SYNTH-001-FY2026.xlsx
+--WorkbookBoundary--
+
+### Run this named request first after each startup to resolve the new import ID.
+# @name importedWorkbooks
+GET {{baseUrl}}/api/clients/{{clientId}}/workbooks
+
+### Waiting files or rejection details
+GET {{baseUrl}}/api/clients/{{clientId}}/workbooks/inbox
+
+### Explicit Categorize button action (change DPL to TFA or CRD)
+POST {{baseUrl}}/api/clients/{{clientId}}/workbooks/{{importId}}/categorize?type=DPL
+
+### Background categorization run progress
+GET {{baseUrl}}/api/clients/{{clientId}}/workbooks/{{importId}}/runs
+
+### Verify logical batches of 20, 20, 10 for each requested type
+GET {{baseUrl}}/api/clients/{{clientId}}/workbooks/{{importId}}/batches
+
+### Read 20 saved SQL rows and their predictions (use skip=20 then skip=40)
+GET {{baseUrl}}/api/clients/{{clientId}}/workbooks/{{importId}}/records?type=DPL&skip=0&take=20
+
+### Legacy single-description demo: get the synthetic example entries
+GET {{baseUrl}}/api/categorization/examples
+
+### Run the local ONNX model and retrieve similar examples
+POST {{baseUrl}}/api/categorization/suggestions
+Content-Type: application/json
+
+{
+  "description": "New laptops for the finance team",
+  "count": 3
+}

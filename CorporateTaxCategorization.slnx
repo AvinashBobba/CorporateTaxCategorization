@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="CorporateTaxCategorization.Api/CorporateTaxCategorization.Api.csproj" />
+  <Project Path="CorporateTaxCategorization.MachineLearning/CorporateTaxCategorization.MachineLearning.csproj" />
+  <Project Path="CorporateTaxCategorizationHost/CorporateTaxCategorizationHost.csproj" />
+</Solution>

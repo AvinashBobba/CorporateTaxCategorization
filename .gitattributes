@@ -1,0 +1,8 @@
+* text=auto
+
+# Keep downloaded model files byte-for-byte identical to their SHA256 manifest.
+CorporateTaxCategorization.MachineLearning/Models/all-MiniLM-L6-v2/** -text whitespace=cr-at-eol
+# Preserve whitespace in the upstream model card rather than editing vendor content.
+CorporateTaxCategorization.MachineLearning/Models/all-MiniLM-L6-v2/README.md whitespace=cr-at-eol,-trailing-space
+*.onnx -text
+*.xlsx -text

@@ -1,0 +1,183 @@
+<header>
+  <div class="brand">CT<span>Corporate Tax</span></div>
+  <span class="environment">Local workspace</span>
+</header>
+<main>
+  <div class="heading">
+    <div>
+      <p class="eyebrow">WORKBOOK PROCESSING</p>
+      <h1>From raw data to reviewed categories</h1>
+      <p class="intro">
+        Import DPL, TFA and CRD data into SQL. Start categorization when you are ready.
+      </p>
+    </div>
+    <span class="badge">20 records per batch</span>
+  </div>
+  <section class="upload-panel">
+    <div>
+      <h2>1. Import raw data</h2>
+      <p>Upload a workbook with one sheet per type. The background job handles the SQL import.</p>
+    </div>
+    <div class="upload-controls">
+      <label
+        >Client ID<input
+          [(ngModel)]="clientInput"
+          maxlength="64"
+          (keyup.enter)="changeClient()"
+          [disabled]="busy()"
+      /></label>
+      <button class="secondary" (click)="changeClient()" [disabled]="busy()">Load client</button>
+      <label class="file-label"
+        >Excel workbook<input
+          type="file"
+          accept=".xlsx"
+          (change)="chooseFile($event)"
+          [disabled]="busy()"
+      /></label>
+      <button (click)="upload()" [disabled]="!file || busy()">Upload workbook</button>
+    </div>
+    @if (message()) {
+      <p class="notice" role="status">{{ message() }}</p>
+    }
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    @if (inbox().pending.length) {
+      <p class="notice" role="status">
+        {{ inbox().pending.length }} workbook(s) waiting for the background SQL import. This page
+        refreshes automatically.
+      </p>
+    }
+    @for (rejection of inbox().rejected; track rejection.file) {
+      <p class="error">Import rejected: {{ rejection.error }}</p>
+    }
+  </section>
+  <div class="workspace">
+    <aside>
+      <div class="section-heading">
+        <h2>Imported workbooks</h2>
+        <button class="text-button" (click)="refresh()">Refresh</button>
+      </div>
+      <p class="muted">Client {{ client() }}</p>
+      @for (workbook of workbooks(); track workbook.id) {
+        <button
+          class="workbook"
+          [class.active]="selectedId() === workbook.id"
+          (click)="selectWorkbook(workbook.id)"
+        >
+          <strong>{{ workbook.entityId }}</strong
+          ><span>{{ workbook.period }} · {{ workbook.total }} raw rows</span
+          ><span class="success">SQL import succeeded</span
+          ><small>{{ workbook.predicted }} categorized · {{ workbook.pending }} pending</small>
+        </button>
+      } @empty {
+        <p class="empty">No successful imports yet. Upload a workbook or wait for the inbox job.</p>
+      }
+    </aside>
+    <section class="results">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">2. CATEGORIZE</p>
+          <h2>Saved rows and predictions</h2>
+        </div>
+      </div>
+      @if (selected(); as workbook) {
+        <div class="tabs" role="tablist" aria-label="Sheet type">
+          @for (sheetType of types; track sheetType) {
+            <button
+              role="tab"
+              [attr.aria-selected]="type() === sheetType"
+              [class.selected]="type() === sheetType"
+              (click)="selectType(sheetType)"
+            >
+              {{ sheetType }}
+            </button>
+          }
+        </div>
+        <div class="action-row">
+          <div>
+            <strong>{{ type() }} · {{ sheet()?.total ?? 0 }} raw records</strong>
+            <p>{{ sheet()?.pending ?? 0 }} pending categorization. SQL import is complete.</p>
+          </div>
+          <button [disabled]="!canCategorize()" (click)="categorize()">
+            Categorize {{ type() }}
+          </button>
+        </div>
+        @for (run of currentRuns(); track run.id) {
+          <p class="run-status" [class.error]="run.status === 'Failed'">
+            {{ run.status }} · {{ run.processed }} records processed
+            @if (run.error) {
+              <span>— {{ run.error }}</span>
+            }
+          </p>
+        }
+        @if (currentBatches().length) {
+          <p class="batch-list">
+            Saved batches:
+            @for (batch of currentBatches(); track batch.id) {
+              <span>{{ batch.processed }} rows</span>
+            }
+          </p>
+        }
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Record</th>
+                <th>Description</th>
+                <th class="numeric">Amount</th>
+                <th>Status</th>
+                <th>Suggested category</th>
+                <th class="numeric">Similarity</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td>
+                    <strong>{{ row.recordId }}</strong
+                    ><small>Excel row {{ row.sourceRow }}</small>
+                  </td>
+                  <td>{{ row.description }}</td>
+                  <td class="numeric">
+                    {{ row.amount | number: '1.2-2' }}<small>{{ row.currency }}</small>
+                  </td>
+                  <td>
+                    <span class="status" [class.review]="row.status === 'NeedsReview'">{{
+                      row.status === 'NeedsReview' ? 'Needs review' : row.status
+                    }}</span>
+                  </td>
+                  <td>{{ row.suggestedCategory ?? 'Awaiting categorization' }}</td>
+                  <td class="numeric">
+                    {{ row.similarity === null ? '—' : (row.similarity | number: '1.3-3') }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span>{{ total() ? skip() + 1 : 0 }}–{{ skip() + rows().length }} of {{ total() }}</span>
+          <div>
+            <button class="secondary" [disabled]="skip() === 0" (click)="page(-1)">Previous</button
+            ><button class="secondary" [disabled]="skip() + 20 >= total()" (click)="page(1)">
+              Next 20
+            </button>
+          </div>
+        </div>
+        <p class="footnote">
+          Synthetic category references are used for the sample client. Similarity is not
+          confidence; every prediction requires review.
+        </p>
+      } @else {
+        <div class="empty-state">
+          <h3>Import a workbook to begin</h3>
+          <p>
+            Categorize becomes available after the background job successfully saves raw rows to
+            SQL.
+          </p>
+        </div>
+      }
+    </section>
+  </div>
+</main>

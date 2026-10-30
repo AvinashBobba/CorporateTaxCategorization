@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+node_modules/
+*.user
+artifacts/
+*.download
+data/workbooks/
+**/dist/
+**/.angular/
+outputs/**/*-preview.png
+outputs/**/*.inspect.ndjson
